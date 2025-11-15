@@ -1,8 +1,15 @@
-// Centralized configuration - loaded from config.py via network_data.json
-// This is the SINGLE SOURCE OF TRUTH for visualization parameters
+// ============================================================
+// CONFIGURATION SYSTEM - SINGLE SOURCE OF TRUTH
+// ============================================================
+// ALL configuration values are defined in config.py
+// config.py exports THREEJS_PARAMS to network_data.json
+// This module loads those values at runtime
+// DO NOT hardcode values here - modify config.py instead
+// ============================================================
 
+// Runtime parameters object (populated from network_data.json)
 export const P = {
-    size: 1.0,
+    size: 1.0,              // Fallback only - real value from config.py
     bloom: 2.0,
     spread: 1.0,
     conn: 1.0,

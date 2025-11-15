@@ -1,6 +1,7 @@
+import * as THREE from 'three';
 import { P, COLORS, loadConfigFromData } from './config.js';
 import { updateUI, setupUIEventListeners } from './ui.js';
-import { init, animate, buildVis, getRenderer, onMouse } from './scene.js';
+import { init, animate, buildVis, getRenderer, onMouse, applyParams } from './scene.js';
 
 console.log('THREE.js loaded, version:', THREE.REVISION);
 

@@ -12,21 +12,20 @@ This project analyzes Twitter retweet data to identify engagement patterns acros
 SNAMiniProject/
 ├── data/
 │   ├── In-Depth Twitter Retweet Analysis Dataset.csv
-│   └── network_data.json
+│   └── network_data.json              # Generated network data with parameters
 ├── threejs/
-│   ├── css/
-│   │   └── styles.css
 │   ├── js/
-│   │   ├── main.js
-│   │   ├── config.js
-│   │   ├── ui.js
-│   │   ├── scene.js
-│   │   └── materials.js
-│   ├── index.html
-│   └── launch.py
-├── config.py
-├── miniProject.ipynb
-├── requirements.txt
+│   │   ├── main.js                     # Entry point, data loading, coordination
+│   │   ├── config.js                   # Runtime configuration loader
+│   │   ├── scene.js                    # Three.js scene, rendering, visualization
+│   │   ├── ui.js                       # UI event handlers, parameter updates
+│   │   └── materials.js                # Shader materials, texture generation
+│   ├── index.html                      # Visualization interface
+│   └── launch.py                       # Local development server
+├── config.py                           # ⭐ CENTRAL configuration authority
+├── miniProject.ipynb                   # Network analysis and data generation
+├── requirements.txt                    # Python dependencies
+├── CONFIGURATION.md                    # Configuration system documentation
 └── README.md
 ```
 
@@ -44,20 +43,23 @@ SNAMiniProject/
 - Community-level statistics and inter-community connections
 
 ### Interactive 3D Visualization
-- WebGL-accelerated Three.js rendering
-- Real-time parameter adjustment (node size, spread, bloom effects)
-- Dynamic node positioning with smooth updates
-- Community representatives positioned at cluster centroids
-- Inter-community connection beams with varying thickness
-- Hover tooltips with detailed statistics
-- Background starfield for spatial depth
+- WebGL-accelerated Three.js rendering with modular ES6 architecture
+- Real-time parameter adjustment (node size, spread, bloom, connection width/opacity)
+- Dynamic node positioning with smooth updates using original coordinate caching
+- Community representatives positioned at cluster centroids with glow effects
+- Inter-community connection beams with gradient shaders and adjustable thickness
+- Hover tooltips with detailed statistics (reach, retweets, likes)
+- Background starfield with configurable opacity for spatial depth
+- Sidebar control panel with live parameter display and reset functionality
 
-### Centralized Configuration
-- Single source of truth: `config.py` defines all parameters
-- Parameters exported to `network_data.json` during notebook execution
-- JavaScript modules load configuration dynamically from JSON
-- No duplicate constants across Python/JavaScript codebases
+### Centralized Configuration System
+- **Single source of truth**: `config.py` defines ALL parameters
+- Parameters exported to `network_data.json` via `THREEJS_PARAMS` dictionary
+- JavaScript modules (`js/config.js`) load configuration dynamically from JSON
+- Zero duplicate constants across Python/JavaScript codebases
+- Original position caching prevents coordinate drift during parameter updates
 - Reproducible layouts with fixed random seeds
+- See `CONFIGURATION.md` for detailed architecture documentation
 
 ## Technical Implementation
 
@@ -74,11 +76,12 @@ SNAMiniProject/
 - Standardized scaling for cosine similarity computation
 
 ### Visualization Technology
-- Three.js r160 with modular ES6 architecture
-- Custom shader materials for gradient connection edges
-- Post-processing: Unreal Bloom Pass with normalized intensity
-- Orbit controls with smooth damping
-- Real-time parameter updates without scene rebuild
+- Three.js r160 with modular ES6 architecture (separated concerns: scene, UI, materials)
+- Custom shader materials with gradient interpolation and opacity uniforms for connection edges
+- Post-processing: Unreal Bloom Pass with adaptive emissive intensity based on color luminance
+- Orbit controls with smooth damping and auto-rotation toggle
+- Real-time parameter updates without scene rebuild using original position storage
+- Efficient geometry updates: only modified elements are rebuilt (e.g., connection beams)
 
 ## Installation and Setup
 
@@ -118,15 +121,17 @@ This starts a local HTTP server at `http://localhost:8000` and opens the visuali
 - Scroll: Zoom in/out
 - Space Bar: Toggle auto-rotation
 
-### Interactive Parameters
-- Node Size: Adjust all node scales (0.1-5.0)
-- Bloom Strength: Control glow intensity (0.0-5.0)
-- Node Spread: Modify spatial distribution (0.1-5.0)
-- Connection Width: Scale inter-community beams (0.1-3.0)
-- Edge Opacity: Adjust faint connection visibility (0.0-1.0)
-- Stars Opacity: Control background starfield (0.0-1.0)
+### Interactive Parameters (Side Panel)
+- **Node Size**: Adjust all node scales (0.5-2.5)
+- **Bloom Strength**: Control glow intensity (0.5-5.0)
+- **Node Spread**: Modify spatial distribution (0.1-5.0) - scales from original positions
+- **Connection Width**: Scale inter-community beam thickness (0.1-3.0)
+- **Connection Opacity**: Adjust beam transparency (0.0-1.0) via shader uniforms
+- **Faint Edge Opacity**: Control location-to-location edge visibility (0.0-0.5)
+- **Stars Opacity**: Background starfield brightness (0.0-1.0)
+- **Display Toggles**: Show/hide edges, connections, labels, auto-rotation
 
-All parameters update in real-time without requiring a rebuild.
+All parameters update in real-time without requiring a scene rebuild. Original coordinates are cached to prevent drift during repeated adjustments.
 
 ## Configuration Architecture
 
@@ -229,16 +234,33 @@ For large networks, only the strongest connections are displayed (configurable v
 ### WebGL Acceleration
 Three.js utilizes GPU rendering for smooth 60fps visualization of hundreds of nodes and thousands of edges.
 
+## Recent Updates
+
+### December 2024 - Architecture Refactor
+- ✅ Modularized JavaScript codebase into separate files (main, scene, ui, materials, config)
+- ✅ Established `config.py` as single source of truth for all parameters
+- ✅ Fixed coordinate drift bug by caching original positions in `userData`
+- ✅ Implemented shader-based connection opacity via `uOpacity` uniform
+- ✅ Added comprehensive configuration documentation (`CONFIGURATION.md`)
+- ✅ Styled sidebar panel with animated close button
+- ✅ Eliminated 700+ lines of duplicate inline code from HTML
+
 ## Troubleshooting
+
+### THREE is not defined / Module Import Errors
+Ensure your browser supports ES6 modules and the importmap is loaded. Use a modern browser (Chrome 89+, Firefox 108+, Safari 16.4+).
+
+### Connection Opacity/Spread Not Working
+Clear browser cache (Ctrl+Shift+Delete) and hard refresh (Ctrl+F5). Ensure `network_data.json` was regenerated after updating `config.py`.
 
 ### Browser Does Not Open
 Navigate to `http://localhost:8000/threejs/index.html` manually after starting the server.
 
-### Outdated Visualization Data
-Hard refresh (Ctrl+F5) to clear cached JSON.
+### Edges Not Aligned with Nodes
+This was caused by coordinate drift from repeated calculations. Now fixed - positions are always calculated from cached originals.
 
 ### Port Conflicts
-Modify the PORT variable in `threejs/launch.py`.
+Modify the PORT variable in `threejs/launch.py` (default: 8000).
 
 ### Missing Dependencies
 Run `pip install -r requirements.txt`.

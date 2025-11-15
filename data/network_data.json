@@ -38654,7 +38654,7 @@
     }
   ],
   "metadata": {
-    "generated_at": "2025-11-16T00:42:50.275913",
+    "generated_at": "2025-11-16T01:12:34.455110",
     "min_tweets_filter": 3,
     "total_locations": 284,
     "total_edges": 2744,
@@ -38663,12 +38663,14 @@
   "threejs_params": {
     "node_size": 1.0,
     "bloom_strength": 0.5,
-    "node_spread": 2.0,
+    "node_spread": 1.0,
     "connection_width": 1.0,
+    "connection_opacity": 0.6,
     "edge_opacity": 0.12,
     "stars_opacity": 0.7,
     "auto_rotate": true,
     "show_edges": true,
+    "show_connections": true,
     "show_labels": true,
     "location_node_size": 0.12,
     "community_size_min": 0.4,

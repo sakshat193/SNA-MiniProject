@@ -4,11 +4,14 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { P, COLORS } from './config.js';
-import { createGradientEdgeMaterial } from './materials.js';
+import { createGradientEdgeMaterial, makeTex } from './materials.js';
 
 // Globals
 let scene, cam, rend, ctrl, comp, bloom;
 let meshNodes = [], meshReps = [], meshEdges = [], meshLabels = [], meshStars;
+
+// Create gradient textures for each color
+const TEX = COLORS.map(makeTex);
 
 // Export renderer objects for external use
 export function getRenderer() { return { cam, rend, comp }; }
@@ -89,7 +92,7 @@ function buildVis(d) {
         blending: THREE.AdditiveBlending
     });
     const edges = new THREE.LineSegments(eGeo, eMat);
-    edges.userData = { type: 'edges' };
+    edges.userData = { type: 'edges', originalEdges: d.edges.map(e => ({ source: [...e.source], target: [...e.target] })) };
     edges.visible = P.showEdge;
     scene.add(edges);
     meshEdges.push(edges);
@@ -111,7 +114,7 @@ function buildVis(d) {
         });
         const m = new THREE.Mesh(nGeo, mat);
         m.position.set(loc.position[0] * P.spread, loc.position[1] * P.spread, loc.position[2] * P.spread);
-        m.userData = { type: 'location', data: loc };
+        m.userData = { type: 'location', data: loc, originalPos: [...loc.position] };
         scene.add(m);
         meshNodes.push(m);
     });
@@ -135,7 +138,7 @@ function buildVis(d) {
         });
         const core = new THREE.Mesh(cGeo, cMat);
         core.position.set(comm.position[0] * P.spread, comm.position[1] * P.spread, comm.position[2] * P.spread);
-        core.userData = { type: 'representative', data: comm };
+        core.userData = { type: 'representative', data: comm, originalPos: [...comm.position] };
         scene.add(core);
         meshReps.push(core);
         
@@ -149,7 +152,7 @@ function buildVis(d) {
         });
         const glow = new THREE.Mesh(gGeo, gMat);
         glow.position.copy(core.position);
-        glow.userData = { type: 'representative', data: comm };
+        glow.userData = { type: 'representative', data: comm, originalPos: [...comm.position] };
         scene.add(glow);
         meshReps.push(glow);
         
@@ -194,12 +197,17 @@ function buildVis(d) {
             if (rad <= 0) return;
             
             const geo = new THREE.CylinderGeometry(rad, rad, len, 12, 1, true);
-            const mat = createGradientEdgeMaterial(c1, c2);
+            const mat = createGradientEdgeMaterial(c1, c2, P.connOp);
             
             const beam = new THREE.Mesh(geo, mat);
             beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
             beam.position.copy(mid);
-            beam.userData = { type: 'community_edge', data: { from: comm.id, to: connId, fromSize: comm.size, toSize: tgt.size }};
+            beam.userData = { 
+                type: 'community_edge', 
+                data: { from: comm.id, to: connId, fromSize: comm.size, toSize: tgt.size },
+                originalFromPos: [...comm.position],
+                originalToPos: [...tgt.position]
+            };
             beam.visible = P.showConn;
             scene.add(beam);
             meshEdges.push(beam);
@@ -341,6 +349,7 @@ function applyParams() {
         meshEdges.forEach(m => {
             if (m.userData.type === 'community_edge' && m.material.uniforms) {
                 m.material.uniforms.uBloom.value = P.bloom;
+                m.material.uniforms.uOpacity.value = P.connOp;
             }
         });
     } catch (e) {
@@ -349,7 +358,99 @@ function applyParams() {
 }
 
 function updateNodePositions() {
-    // ... (implementation in main.js)
+    if (!meshNodes.length && !meshReps.length) return;
+    
+    // Update location nodes (position and size) using original positions
+    meshNodes.forEach((mesh) => {
+        const originalPos = mesh.userData.originalPos;
+        if (originalPos) {
+            mesh.position.set(
+                originalPos[0] * P.spread,
+                originalPos[1] * P.spread,
+                originalPos[2] * P.spread
+            );
+            const newScale = P.size;
+            mesh.scale.set(newScale, newScale, newScale);
+        }
+    });
+    
+    // Update community representatives and labels using original positions
+    for (let repIdx = 0; repIdx < meshReps.length; repIdx += 2) {
+        const core = meshReps[repIdx];
+        const glow = meshReps[repIdx + 1];
+        const label = meshLabels[Math.floor(repIdx / 2)];
+        
+        if (core && core.userData.originalPos) {
+            const originalPos = core.userData.originalPos;
+            const newPos = new THREE.Vector3(
+                originalPos[0] * P.spread,
+                originalPos[1] * P.spread,
+                originalPos[2] * P.spread
+            );
+            core.position.copy(newPos);
+            const newScale = P.size;
+            core.scale.set(newScale, newScale, newScale);
+            if (glow) {
+                glow.position.copy(newPos);
+                glow.scale.set(newScale, newScale, newScale);
+            }
+            if (label) {
+                const sz = core.geometry.parameters.radius * newScale;
+                label.position.set(newPos.x, newPos.y + sz + 0.8, newPos.z);
+            }
+        }
+    }
+    
+    // Update community connection edges using original positions
+    meshEdges.forEach(beam => {
+        if (beam.userData.type === 'community_edge' && beam.userData.originalFromPos && beam.userData.originalToPos) {
+            const fromPos = beam.userData.originalFromPos;
+            const toPos = beam.userData.originalToPos;
+            
+            const st = new THREE.Vector3(
+                fromPos[0] * P.spread,
+                fromPos[1] * P.spread,
+                fromPos[2] * P.spread
+            );
+            const en = new THREE.Vector3(
+                toPos[0] * P.spread,
+                toPos[1] * P.spread,
+                toPos[2] * P.spread
+            );
+            const dir = new THREE.Vector3().subVectors(en, st);
+            const len = dir.length();
+            const mid = new THREE.Vector3().addVectors(st, en).multiplyScalar(0.5);
+            
+            // Update geometry to new length and width
+            beam.geometry.dispose();
+            const szF = beam.userData.data.fromSize + beam.userData.data.toSize;
+            const rad = 0.0003 * szF * P.conn;
+            beam.geometry = new THREE.CylinderGeometry(rad, rad, len, 12, 1, true);
+            
+            // Update position and rotation
+            beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+            beam.position.copy(mid);
+        }
+    });
+    
+    // Update faint edges using original stored positions
+    if (meshEdges.length > 0 && meshEdges[0].userData.type === 'edges') {
+        const edgeMesh = meshEdges[0];
+        const originalEdges = edgeMesh.userData.originalEdges;
+        if (originalEdges) {
+            const positions = edgeMesh.geometry.attributes.position.array;
+            let idx = 0;
+            originalEdges.forEach(e => {
+                positions[idx++] = e.source[0] * P.spread;
+                positions[idx++] = e.source[1] * P.spread;
+                positions[idx++] = e.source[2] * P.spread;
+                positions[idx++] = e.target[0] * P.spread;
+                positions[idx++] = e.target[1] * P.spread;
+                positions[idx++] = e.target[2] * P.spread;
+            });
+            edgeMesh.geometry.attributes.position.needsUpdate = true;
+        }
+    }
 }
 
 function clearMeshes() {

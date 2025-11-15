@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 
-export function createGradientEdgeMaterial(color1, color2) {
+export function createGradientEdgeMaterial(color1, color2, opacity = 0.6) {
     return new THREE.ShaderMaterial({
         uniforms: {
             uColor1: { value: color1 },
             uColor2: { value: color2 },
-            uBloom: { value: 1.0 }
+            uBloom: { value: 1.0 },
+            uOpacity: { value: opacity }
         },
         vertexShader: `
             varying vec2 vUv;
@@ -18,11 +19,12 @@ export function createGradientEdgeMaterial(color1, color2) {
             uniform vec3 uColor1;
             uniform vec3 uColor2;
             uniform float uBloom;
+            uniform float uOpacity;
             varying vec2 vUv;
 
             void main() {
                 vec3 color = mix(uColor1, uColor2, vUv.y);
-                gl_FragColor = vec4(color * uBloom, 1.0);
+                gl_FragColor = vec4(color * uBloom, uOpacity);
             }
         `,
         transparent: true,

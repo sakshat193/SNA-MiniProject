@@ -1,6 +1,18 @@
 """
-Unified Network Visualization Configuration
-Ensures consistency across Jupyter notebook, Plotly, and ThreeJS visualizations
+Unified Network Visualization Configuration - SINGLE SOURCE OF TRUTH
+=====================================================================
+This file is the CENTRAL AUTHORITY for all visualization parameters.
+
+How it works:
+1. All constants are defined HERE in config.py
+2. These are exported to data/network_data.json via the 'threejs_params' field
+3. The ThreeJS visualization loads these values from network_data.json at runtime
+4. DO NOT hardcode parameters elsewhere - always modify this file
+
+This ensures consistency across:
+- Jupyter notebook analysis
+- Plotly visualizations  
+- ThreeJS 3D interactive visualization
 """
 
 # ============================================================
@@ -73,7 +85,7 @@ INTER_COMM_EDGE_OPACITY = 0.6    # Stronger inter-community connections
 
 THREEJS_PARAMS = {
     'node_size': 1.0,            # Base node size multiplier
-    'bloom_strength': 2.0,       # Bloom post-processing strength
+    'bloom_strength': 0.5,       # Bloom post-processing strength
     'node_spread': 1.0,          # Spatial spread multiplier
     'connection_width': 1.0,     # Community connection width multiplier
     'connection_opacity': 0.6,   # Community connection opacity
