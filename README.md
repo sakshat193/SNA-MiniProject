@@ -4,7 +4,7 @@ A comprehensive social network analysis project that constructs, analyzes, and v
 
 ## Overview
 
-This project analyzes Twitter retweet data to identify meaningful patterns in user engagement across geographic locations. By computing behavioral similarity metrics, we construct a network where locations with similar engagement characteristics are connected, revealing natural community structures within the data.
+This project analyzes Twitter retweet data to identify engagement patterns across geographic locations. Using behavioral similarity metrics and community detection algorithms, it constructs and visualizes network structures that reveal natural groupings in the data.
 
 ## Project Structure
 
@@ -14,7 +14,14 @@ SNAMiniProject/
 │   ├── In-Depth Twitter Retweet Analysis Dataset.csv
 │   └── network_data.json
 ├── threejs/
-│   ├── simple.html
+│   ├── css/
+│   │   └── styles.css
+│   ├── js/
+│   │   ├── main.js
+│   │   ├── config.js
+│   │   ├── ui.js
+│   │   ├── scene.js
+│   │   └── materials.js
 │   ├── index.html
 │   └── launch.py
 ├── config.py
@@ -65,10 +72,11 @@ SNAMiniProject/
 - Standardized scaling for cosine similarity computation
 
 ### Visualization Technology
-- Three.js r160 with ES6 modules
-- Post-processing: Unreal Bloom Pass for glow effects
-- Orbit controls for intuitive camera manipulation
-- Dynamic geometry updates for real-time parameter changes
+- Three.js r160 with modular ES6 architecture
+- Custom shader materials for gradient connection edges
+- Post-processing: Unreal Bloom Pass with normalized intensity
+- Orbit controls with smooth damping
+- Real-time parameter updates without scene rebuild
 
 ## Installation and Setup
 
@@ -98,9 +106,7 @@ The notebook includes detailed markdown documentation explaining each step of th
 python threejs/launch.py
 ```
 
-This starts a local HTTP server and opens the interactive 3D visualization in your default browser.
-
-Alternatively, open `threejs/simple.html` directly after running the export cell in the notebook.
+This starts a local HTTP server at `http://localhost:8000` and opens the visualization in your default browser.
 
 ## Visualization Controls
 
@@ -217,26 +223,21 @@ Three.js utilizes GPU rendering for smooth 60fps visualization of hundreds of no
 
 ## Troubleshooting
 
-### Browser Does Not Open Automatically
-Manually open `threejs/simple.html` in your browser after running the export cell.
+### Browser Does Not Open
+Navigate to `http://localhost:8000/threejs/index.html` manually after starting the server.
 
-### Visualization Shows Outdated Data
-Hard refresh the browser (Ctrl+F5) to clear cached JSON data.
+### Outdated Visualization Data
+Hard refresh (Ctrl+F5) to clear cached JSON.
 
-### Port 8000 Already in Use
-Edit `threejs/launch.py` and change the PORT variable to an available port number.
+### Port Conflicts
+Modify the PORT variable in `threejs/launch.py`.
 
-### Missing Module Errors
-Ensure all dependencies are installed: `pip install -r requirements.txt`
+### Missing Dependencies
+Run `pip install -r requirements.txt`.
 
 ## Academic Context
 
-This project was developed as part of a Social Network Analysis course, demonstrating:
-- Network construction from behavioral data
-- Community detection algorithms
-- Interactive visualization techniques
-- Feature engineering for similarity metrics
-- Configuration management for reproducible research
+Developed for a Social Network Analysis course, demonstrating network construction from behavioral data, community detection algorithms, and interactive 3D visualization techniques.
 ## License
 
 Educational project for Social Network Analysis coursework.

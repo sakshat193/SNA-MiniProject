@@ -49,8 +49,8 @@ if __name__ == "__main__":
     server_thread.start()
     time.sleep(1)
     
-    # Open browser to the simple HTML (single-file solution)
-    url = f"http://localhost:{PORT}/threejs/simple.html"
+    # Open browser to the visualization
+    url = f"http://localhost:{PORT}/threejs/index.html"
     print(f"Opening: {url}")
     print()
     print("Keep this window open")
