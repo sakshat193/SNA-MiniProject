@@ -10,6 +10,9 @@ import { createGradientEdgeMaterial } from './materials.js';
 let scene, cam, rend, ctrl, comp, bloom;
 let meshNodes = [], meshReps = [], meshEdges = [], meshLabels = [], meshStars;
 
+// Export renderer objects for external use
+export function getRenderer() { return { cam, rend, comp }; }
+
 function init() {
     // Scene setup
     scene = new THREE.Scene();

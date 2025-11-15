@@ -1,6 +1,6 @@
-import { P, COLORS } from './config.js';
-import { updateUI, applyParams, resetParams } from './ui.js';
-import { buildVis, updateNodePositions, clearMeshes } from './scene.js';
+import { P, COLORS, loadConfigFromData } from './config.js';
+import { updateUI, setupUIEventListeners } from './ui.js';
+import { init, animate, buildVis, getRenderer, onMouse } from './scene.js';
 
 console.log('THREE.js loaded, version:', THREE.REVISION);
 
@@ -58,17 +58,19 @@ async function loadData() {
         
         // Load Three.js parameters from config if available
         if (data.threejs_params) {
-            console.log('Loading parameters from config...');
-            Object.assign(P, data.threejs_params);
+            console.log('Loading parameters from config.py via network_data.json...');
+            loadConfigFromData(data.threejs_params);
             
-            // Update UI controls
+            // Update UI controls to reflect loaded config
             document.getElementById('iSize').value = P.size;
             document.getElementById('iBloom').value = P.bloom;
             document.getElementById('iSpread').value = P.spread;
             document.getElementById('iConn').value = P.conn;
+            document.getElementById('iConnOp').value = P.connOp;
             document.getElementById('iEdge').value = P.edgeOp;
             document.getElementById('iStar').value = P.starOp;
             document.getElementById('cEdge').checked = P.showEdge;
+            document.getElementById('cConn').checked = P.showConn;
             document.getElementById('cRot').checked = P.autoRot;
             document.getElementById('cLabel').checked = P.showLabel;
             updateUI();
@@ -102,6 +104,7 @@ function updateStats(c, l, e) {
 
 // Event Listeners
 window.addEventListener('resize', () => {
+    const { cam, rend, comp } = getRenderer();
     cam.aspect = window.innerWidth / window.innerHeight;
     cam.updateProjectionMatrix();
     rend.setSize(window.innerWidth, window.innerHeight);

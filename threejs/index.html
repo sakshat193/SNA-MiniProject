@@ -279,6 +279,7 @@
     <div id="panelToggle" onclick="togglePanel()">⚙</div>
     
     <div id="panel">
+        <button class="panel-close" onclick="togglePanel()">✕</button>
         <div class="section">
             <h3>Network Stats</h3>
             <div class="stat">
@@ -392,8 +393,9 @@
         }
     }
     </script>
-
-    <script type="module">
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
         import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';

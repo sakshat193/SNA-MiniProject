@@ -72,18 +72,20 @@ INTER_COMM_EDGE_OPACITY = 0.6    # Stronger inter-community connections
 # ============================================================
 
 THREEJS_PARAMS = {
-    'node_size': 1.0,           # Base node size multiplier
-    'bloom_strength': 0.5,      # Bloom post-processing strength
-    'node_spread': 1.0,         # Spatial spread multiplier
-    'connection_width': 1.0,    # Community connection width multiplier
-    'edge_opacity': 0.12,       # Faint edge opacity
-    'stars_opacity': 0.7,       # Background stars opacity
-    'auto_rotate': True,        # Auto-rotation enabled
-    'show_edges': True,         # Show faint edges
-    'show_labels': True,        # Show community labels
-    'location_node_size': 0.12, # Base size for location nodes
-    'community_size_min': 0.4,  # Minimum community node size
-    'community_size_range': 0.8 # Range for community node scaling
+    'node_size': 1.0,            # Base node size multiplier
+    'bloom_strength': 2.0,       # Bloom post-processing strength
+    'node_spread': 1.0,          # Spatial spread multiplier
+    'connection_width': 1.0,     # Community connection width multiplier
+    'connection_opacity': 0.6,   # Community connection opacity
+    'edge_opacity': 0.12,        # Faint edge opacity
+    'stars_opacity': 0.7,        # Background stars opacity
+    'auto_rotate': True,         # Auto-rotation enabled
+    'show_edges': True,          # Show faint edges
+    'show_connections': True,    # Show community connections
+    'show_labels': True,         # Show community labels
+    'location_node_size': 0.12,  # Base size for location nodes
+    'community_size_min': 0.4,   # Minimum community node size
+    'community_size_range': 0.8  # Range for community node scaling
 }
 
 # ============================================================
@@ -91,7 +93,7 @@ THREEJS_PARAMS = {
 # ============================================================
 
 # Data quality thresholds
-MIN_TWEETS = 1  # Minimum tweets per location for reliable aggregation
+MIN_TWEETS = 3  # Minimum tweets per location for reliable aggregation
 
 # Features used for similarity computation (excluding language - will be encoded separately)
 SIMILARITY_FEATURES = [

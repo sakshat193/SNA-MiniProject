@@ -107,6 +107,30 @@ canvas { display: block; }
 }
 #panel.open { transform: translateX(0); }
 
+.panel-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #00aaff;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    padding: 0;
+}
+.panel-close:hover {
+    background: rgba(255, 0, 0, 0.2);
+    border-color: #ff4444;
+    color: #ff4444;
+}
+
 #panelToggle {
     position: fixed;
     top: 50%;

@@ -53,8 +53,10 @@ SNAMiniProject/
 - Background starfield for spatial depth
 
 ### Centralized Configuration
-- All visualization parameters managed through config.py
-- Automatic parameter synchronization between notebook and visualization
+- Single source of truth: `config.py` defines all parameters
+- Parameters exported to `network_data.json` during notebook execution
+- JavaScript modules load configuration dynamically from JSON
+- No duplicate constants across Python/JavaScript codebases
 - Reproducible layouts with fixed random seeds
 
 ## Technical Implementation
@@ -126,9 +128,15 @@ This starts a local HTTP server at `http://localhost:8000` and opens the visuali
 
 All parameters update in real-time without requiring a rebuild.
 
-## Configuration
+## Configuration Architecture
 
-The `config.py` file centralizes all analysis and visualization parameters:
+The project uses a centralized configuration system where `config.py` is the single source of truth:
+
+### Configuration Flow
+1. Define all parameters in `config.py` (Python)
+2. Notebook exports parameters to `network_data.json`
+3. JavaScript modules (`js/config.js`) load from JSON at runtime
+4. No hardcoded duplicates - one place to change, everywhere updates
 
 ### Layout Parameters
 - Spring layout configuration (k-value, iterations, dimensionality)
