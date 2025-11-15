@@ -453,6 +453,33 @@
             if (meshStars) meshStars.material.opacity = P.starOp;
             meshLabels.forEach(m => m.visible = P.showLabel);
             meshEdges.forEach(m => m.visible = P.showEdge);
+
+            // Update materials' emissive intensity to reflect new bloom setting
+            try {
+                meshNodes.forEach(m => {
+                    if (m.material && 'emissive' in m.material) {
+                        m.material.emissiveIntensity = computeEmissiveIntensity(m.material.emissive, 0.6);
+                        m.material.needsUpdate = true;
+                    }
+                });
+
+                meshReps.forEach((m, i) => {
+                    if (m.material && 'emissive' in m.material) {
+                        // representative cores are at even indices (core, glow)
+                        m.material.emissiveIntensity = computeEmissiveIntensity(m.material.emissive, 1.2);
+                        m.material.needsUpdate = true;
+                    }
+                });
+
+                meshEdges.forEach(m => {
+                    if (m.userData.type === 'community_edge' && m.material && 'emissive' in m.material) {
+                        m.material.emissiveIntensity = computeEmissiveIntensity(m.material.emissive, 0.5);
+                        m.material.needsUpdate = true;
+                    }
+                });
+            } catch (e) {
+                console.warn('applyParams: failed to update emissive intensities', e);
+            }
         }
         
         // Update node positions and sizes based on parameters
@@ -638,6 +665,17 @@
         }
         const TEX = COLORS.map(makeTex);
 
+        // Compute emissive intensity scaled by bloom and color luminance
+        function computeEmissiveIntensity(col, base=1.0) {
+            // col can be a numeric hex (0xRRGGBB) or a THREE.Color or string
+            const c = new THREE.Color(col);
+            const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; // perceived luminance
+            // boost darker colors so bloom is more uniform across hues
+            const boost = 1.0 / Math.max(0.12, lum);
+            // scale with P.bloom, apply base multiplier and cap to avoid extreme intensity
+            const intensity = Math.min(6.0, P.bloom * 0.5 * boost * base);
+            return intensity;
+        }
         // Starfield
         function mkStars() {
             const geo = new THREE.BufferGeometry();
@@ -777,7 +815,7 @@
                     color: 0xffffff,
                     map: TEX[ci],
                     emissive: COLORS[ci],
-                    emissiveIntensity: 0.4,
+                    emissiveIntensity: computeEmissiveIntensity(COLORS[ci], 0.6),
                     metalness: 0.2,
                     roughness: 0.7,
                     transparent: true,
@@ -803,7 +841,7 @@
                 const cMat = new THREE.MeshStandardMaterial({
                     color: cc,
                     emissive: cc,
-                    emissiveIntensity: 1.1,
+                    emissiveIntensity: computeEmissiveIntensity(cc, 1.2),
                     metalness: 0.1,
                     roughness: 0.3
                 });
@@ -871,7 +909,7 @@
                     const mat = new THREE.MeshStandardMaterial({
                         color: cc,
                         emissive: cc,
-                        emissiveIntensity: 0.35,
+                        emissiveIntensity: computeEmissiveIntensity(cc, 0.5),
                         metalness: 0.05,
                         roughness: 0.4,
                         transparent: true,
