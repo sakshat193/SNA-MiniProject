@@ -45,3 +45,5 @@ desktop.ini
 # Environment
 .env
 .venv
+
+.github/    

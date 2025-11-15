@@ -319,7 +319,7 @@
                     <span>Node Spread</span>
                     <span class="val" id="vSpread">1.00</span>
                 </label>
-                <input type="range" id="iSpread" min="0.5" max="2.0" step="0.05" value="1.0">
+                <input type="range" id="iSpread" min="0.1" max="5.0" step="0.05" value="1.0">
             </div>
             
             <div class="control">
@@ -367,10 +367,7 @@
         </div>
         
         <div class="section">
-            <div class="btn-group">
-                <button onclick="resetParams()">Reset</button>
-                <button onclick="rebuild()">Rebuild</button>
-            </div>
+            <button onclick="resetParams()" style="width: 100%;">Reset Parameters</button>
         </div>
     </div>
 
@@ -396,7 +393,7 @@
         let scene, cam, rend, ctrl, comp, bloom, data;
         let meshNodes = [], meshReps = [], meshEdges = [], meshLabels = [], meshStars;
         
-        // Parameters
+        // Parameters (will be loaded from config)
         const P = {
             size: 1.0,
             bloom: 2.0,
@@ -406,7 +403,10 @@
             starOp: 0.7,
             showEdge: true,
             autoRot: true,
-            showLabel: true
+            showLabel: true,
+            locNodeSize: 0.12,
+            commSizeMin: 0.4,
+            commSizeRange: 0.8
         };
         
         const COLORS = [
@@ -438,11 +438,6 @@
             applyParams();
         };
         
-        window.rebuild = () => {
-            clearMeshes();
-            if (data) buildVis(data);
-        };
-        
         function updateUI() {
             document.getElementById('vSize').textContent = P.size.toFixed(2);
             document.getElementById('vBloom').textContent = P.bloom.toFixed(1);
@@ -458,6 +453,106 @@
             if (meshStars) meshStars.material.opacity = P.starOp;
             meshLabels.forEach(m => m.visible = P.showLabel);
             meshEdges.forEach(m => m.visible = P.showEdge);
+        }
+        
+        // Update node positions and sizes based on parameters
+        function updateNodePositions() {
+            if (!data) return;
+            
+            // Update location nodes (position and size)
+            meshNodes.forEach((mesh, idx) => {
+                const loc = data.locations[idx];
+                if (loc) {
+                    mesh.position.set(
+                        loc.position[0] * P.spread,
+                        loc.position[1] * P.spread,
+                        loc.position[2] * P.spread
+                    );
+                    // Update size
+                    const newScale = P.size;
+                    mesh.scale.set(newScale, newScale, newScale);
+                }
+            });
+            
+            // Update community representatives and labels
+            let repIdx = 0;
+            data.communities.forEach(comm => {
+                const core = meshReps[repIdx];
+                const glow = meshReps[repIdx + 1];
+                const label = meshLabels[Math.floor(repIdx / 2)];
+                
+                if (core && core.userData.data) {
+                    const newPos = new THREE.Vector3(
+                        comm.position[0] * P.spread,
+                        comm.position[1] * P.spread,
+                        comm.position[2] * P.spread
+                    );
+                    core.position.copy(newPos);
+                    const newScale = P.size;
+                    core.scale.set(newScale, newScale, newScale);
+                    if (glow) {
+                        glow.position.copy(newPos);
+                        glow.scale.set(newScale, newScale, newScale);
+                    }
+                    if (label) {
+                        const sz = core.geometry.parameters.radius * newScale;
+                        label.position.set(newPos.x, newPos.y + sz + 0.8, newPos.z);
+                    }
+                }
+                repIdx += 2;
+            });
+            
+            // Update community connection edges
+            let edgeIdx = meshEdges.length > 0 && meshEdges[0].userData.type === 'edges' ? 1 : 0;
+            data.communities.forEach(comm => {
+                comm.connections.forEach(connId => {
+                    const tgt = data.communities.find(c => c.id === connId);
+                    if (!tgt || comm.id >= connId) return;
+                    
+                    const beam = meshEdges[edgeIdx++];
+                    if (beam && beam.userData.type === 'community_edge') {
+                        const st = new THREE.Vector3(
+                            comm.position[0] * P.spread,
+                            comm.position[1] * P.spread,
+                            comm.position[2] * P.spread
+                        );
+                        const en = new THREE.Vector3(
+                            tgt.position[0] * P.spread,
+                            tgt.position[1] * P.spread,
+                            tgt.position[2] * P.spread
+                        );
+                        const dir = new THREE.Vector3().subVectors(en, st);
+                        const len = dir.length();
+                        const mid = new THREE.Vector3().addVectors(st, en).multiplyScalar(0.5);
+                        
+                        // Update geometry to new length
+                        beam.geometry.dispose();
+                        const szF = Math.max(0, comm.size + tgt.size);
+                        const rad = 0.0003 * szF * P.conn;
+                        beam.geometry = new THREE.CylinderGeometry(rad, rad, len, 12, 1, true);
+                        
+                        // Update position and rotation
+                        beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+                        beam.position.copy(mid);
+                    }
+                });
+            });
+            
+            // Update faint edges
+            if (meshEdges.length > 0 && meshEdges[0].userData.type === 'edges') {
+                const edgeMesh = meshEdges[0];
+                const positions = edgeMesh.geometry.attributes.position.array;
+                let idx = 0;
+                data.edges.forEach(e => {
+                    positions[idx++] = e.source[0] * P.spread;
+                    positions[idx++] = e.source[1] * P.spread;
+                    positions[idx++] = e.source[2] * P.spread;
+                    positions[idx++] = e.target[0] * P.spread;
+                    positions[idx++] = e.target[1] * P.spread;
+                    positions[idx++] = e.target[2] * P.spread;
+                });
+                edgeMesh.geometry.attributes.position.needsUpdate = true;
+            }
         }
         
         function clearMeshes() {
@@ -593,6 +688,35 @@
                 data = await res.json();
                 console.log('Data loaded:', data.communities?.length, 'communities,', data.locations?.length, 'locations');
                 
+                // Load Three.js parameters from config if available
+                if (data.threejs_params) {
+                    console.log('Loading parameters from config...');
+                    P.size = data.threejs_params.node_size || P.size;
+                    P.bloom = data.threejs_params.bloom_strength || P.bloom;
+                    P.spread = data.threejs_params.node_spread || P.spread;
+                    P.conn = data.threejs_params.connection_width || P.conn;
+                    P.edgeOp = data.threejs_params.edge_opacity || P.edgeOp;
+                    P.starOp = data.threejs_params.stars_opacity || P.starOp;
+                    P.showEdge = data.threejs_params.show_edges !== undefined ? data.threejs_params.show_edges : P.showEdge;
+                    P.autoRot = data.threejs_params.auto_rotate !== undefined ? data.threejs_params.auto_rotate : P.autoRot;
+                    P.showLabel = data.threejs_params.show_labels !== undefined ? data.threejs_params.show_labels : P.showLabel;
+                    P.locNodeSize = data.threejs_params.location_node_size || P.locNodeSize;
+                    P.commSizeMin = data.threejs_params.community_size_min || P.commSizeMin;
+                    P.commSizeRange = data.threejs_params.community_size_range || P.commSizeRange;
+                    
+                    // Update UI controls
+                    document.getElementById('iSize').value = P.size;
+                    document.getElementById('iBloom').value = P.bloom;
+                    document.getElementById('iSpread').value = P.spread;
+                    document.getElementById('iConn').value = P.conn;
+                    document.getElementById('iEdge').value = P.edgeOp;
+                    document.getElementById('iStar').value = P.starOp;
+                    document.getElementById('cEdge').checked = P.showEdge;
+                    document.getElementById('cRot').checked = P.autoRot;
+                    document.getElementById('cLabel').checked = P.showLabel;
+                    updateUI();
+                }
+                
                 updateStats(data.communities.length, data.locations.length, data.edges.length);
                 buildVis(data);
                 
@@ -646,7 +770,7 @@
 
             // Location nodes
             console.log('Building location nodes...');
-            const nGeo = new THREE.SphereGeometry(0.12 * P.size, 16, 16);
+            const nGeo = new THREE.SphereGeometry(P.locNodeSize * P.size, 16, 16);
             d.locations.forEach(loc => {
                 const ci = loc.community % COLORS.length;
                 const mat = new THREE.MeshStandardMaterial({
@@ -673,7 +797,7 @@
                 const cc = COLORS[ci];
                 
                 const norm = (comm.size - 34) / (122 - 34);
-                const sz = (0.4 + norm * 0.8) * P.size;
+                const sz = (P.commSizeMin + norm * P.commSizeRange) * P.size;
                 
                 const cGeo = new THREE.SphereGeometry(sz, 24, 24);
                 const cMat = new THREE.MeshStandardMaterial({
@@ -792,14 +916,16 @@
                 tip.style.top = (e.clientY + 15) + 'px';
                 
                 if (pk.userData.type === 'representative') {
+                    const retweets = d.retweets ? d.retweets.toLocaleString() : 'N/A';
+                    const likes = d.likes ? d.likes.toLocaleString() : 'N/A';
                     tip.innerHTML = `
-                        <strong>Community ${d.id} (Rep)</strong><br>
+                        <strong>Community ${d.id}</strong><br>
                         ━━━━━━━━━━━━━━━<br>
-                        Members: ${d.size}<br>
-                        Reach: ${d.reach.toLocaleString()}<br>
-                        Retweets: ${d.retweets.toLocaleString()}<br>
-                        Likes: ${d.likes.toLocaleString()}
-                    `;
+                        Locations: ${d.size}<br>
+                        Total Reach: ${d.reach.toLocaleString()}<br>
+                        ${d.retweets ? `Retweets: ${retweets}<br>` : ''}
+                        ${d.likes ? `Likes: ${likes}` : ''}
+                    `.trim();
                 } else if (pk.userData.type === 'location') {
                     tip.innerHTML = `
                         <strong>Location ${d.id}</strong><br>
@@ -840,6 +966,7 @@
         document.getElementById('iSize').addEventListener('input', e => {
             P.size = parseFloat(e.target.value);
             updateUI();
+            updateNodePositions();
         });
         document.getElementById('iBloom').addEventListener('input', e => {
             P.bloom = parseFloat(e.target.value);
@@ -849,10 +976,12 @@
         document.getElementById('iSpread').addEventListener('input', e => {
             P.spread = parseFloat(e.target.value);
             updateUI();
+            updateNodePositions();
         });
         document.getElementById('iConn').addEventListener('input', e => {
             P.conn = parseFloat(e.target.value);
             updateUI();
+            updateNodePositions();
         });
         document.getElementById('iEdge').addEventListener('input', e => {
             P.edgeOp = parseFloat(e.target.value);

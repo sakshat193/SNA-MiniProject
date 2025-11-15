@@ -1,352 +1,242 @@
-# Twitter Network Visualization
+# Twitter Network Analysis and Visualization
 
-Professional network analysis with community detection and interactive 3D rendering.
+A comprehensive social network analysis project that constructs, analyzes, and visualizes Twitter location networks based on engagement patterns. The project employs community detection algorithms and provides interactive 3D visualizations using Three.js with WebGL rendering.
+
+## Overview
+
+This project analyzes Twitter retweet data to identify meaningful patterns in user engagement across geographic locations. By computing behavioral similarity metrics, we construct a network where locations with similar engagement characteristics are connected, revealing natural community structures within the data.
 
 ## Project Structure
 
 ```
-MiniProject/
-├── data/                           # Dataset and network data
+SNAMiniProject/
+├── data/
 │   ├── In-Depth Twitter Retweet Analysis Dataset.csv
 │   └── network_data.json
-│
-├── plotly/                         # Python/Plotly implementation
-│   ├── network_visualization.py
-│   └── network_visualization.html
-│
-├── threejs/                        # JavaScript/Three.js implementation
-│   ├── network_visualization.html
-│   ├── export_data.py
+├── threejs/
+│   ├── simple.html
+│   ├── index.html
 │   └── launch.py
-│
-├── docs/                          # Documentation
-│   ├── README.md
-│   └── VISUALIZATION_GUIDE.md
-│
-├── miniProject.ipynb             # Analysis notebook
-└── requirements.txt              # Dependencies
+├── config.py
+├── miniProject.ipynb
+├── requirements.txt
+└── README.md
 ```
 
-## Quick Start
+## Key Features
+
+### Network Construction
+- k-Nearest Neighbors (k-NN) graph based on cosine similarity
+- Aggregated behavioral features: reach, retweets, likes, temporal patterns
+- One-hot encoding for language diversity
+- Configurable edge weight thresholds and minimum tweet filters
+
+### Community Detection
+- Louvain algorithm for modularity optimization
+- Resolution parameter tuning for granularity control
+- Community-level statistics and inter-community connections
+
+### Interactive 3D Visualization
+- WebGL-accelerated Three.js rendering
+- Real-time parameter adjustment (node size, spread, bloom effects)
+- Dynamic node positioning with smooth updates
+- Community representatives positioned at cluster centroids
+- Inter-community connection beams with varying thickness
+- Hover tooltips with detailed statistics
+- Background starfield for spatial depth
+
+### Centralized Configuration
+- All visualization parameters managed through config.py
+- Automatic parameter synchronization between notebook and visualization
+- Reproducible layouts with fixed random seeds
+
+## Technical Implementation
+
+### Network Metrics
+- Nodes: 822 unique locations (filtered by minimum tweet threshold)
+- Edges: k-NN connections (k=15) with similarity weights
+- Communities: 12 detected groups
+- Modularity: ~0.81 (strong community structure)
+
+### Feature Engineering
+- Behavioral aggregation: sum, mean, standard deviation
+- Temporal features: weekday mode, hourly patterns
+- Language encoding: one-hot vectors for categorical data
+- Standardized scaling for cosine similarity computation
+
+### Visualization Technology
+- Three.js r160 with ES6 modules
+- Post-processing: Unreal Bloom Pass for glow effects
+- Orbit controls for intuitive camera manipulation
+- Dynamic geometry updates for real-time parameter changes
+
+## Installation and Setup
 
 ### Prerequisites
+- Python 3.8 or higher
+- Modern web browser with WebGL support
+
+### Install Dependencies
 ```powershell
 pip install -r requirements.txt
 ```
 
-### Plotly Version
+## Usage
+
+### 1. Run the Jupyter Notebook
+Open and execute `miniProject.ipynb` to:
+- Load and preprocess the Twitter dataset
+- Construct the similarity network
+- Detect communities using the Louvain algorithm
+- Generate 2D and 3D visualizations
+- Export network data to JSON format
+
+The notebook includes detailed markdown documentation explaining each step of the analysis pipeline.
+
+### 2. Launch the Interactive Visualization
 ```powershell
-cd plotly
-python network_visualization.py
+python threejs/launch.py
 ```
 
-### Three.js Version (Recommended)
-```powershell
-cd threejs
-python launch.py
-```
+This starts a local HTTP server and opens the interactive 3D visualization in your default browser.
 
-## Features
+Alternatively, open `threejs/simple.html` directly after running the export cell in the notebook.
 
-### Both Versions
-- Community representatives positioned at cluster centroids
-- All nodes colored by community membership
-- Representatives scaled by member count
-- Professional tooltips with detailed information
-- Edge hover showing connection strength
-- Proper opacity scaling
+## Visualization Controls
 
-### Three.js Specific
-- WebGL-accelerated rendering
-- Bloom post-processing effects
-- 3D cylinder beams for inter-community connections
-- Radial gradient textures on nodes
-- Background starfield
-- Smooth camera controls with auto-rotate
+### Camera Navigation
+- Left Click + Drag: Rotate view
+- Right Click + Drag: Pan camera
+- Scroll: Zoom in/out
+- Space Bar: Toggle auto-rotation
 
-### Plotly Specific
-- Single HTML file output
-- No server required
-- Dark theme presentation
-- Easy sharing and embedding
+### Interactive Parameters
+- Node Size: Adjust all node scales (0.1-5.0)
+- Bloom Strength: Control glow intensity (0.0-5.0)
+- Node Spread: Modify spatial distribution (0.1-5.0)
+- Connection Width: Scale inter-community beams (0.1-3.0)
+- Edge Opacity: Adjust faint connection visibility (0.0-1.0)
+- Stars Opacity: Control background starfield (0.0-1.0)
 
-## Network Statistics
+All parameters update in real-time without requiring a rebuild.
 
-- **Locations**: 822 unique nodes
-- **Communities**: 12 detected groups
-- **Edges**: 8,392 total (top 2,000 displayed)
-- **Algorithm**: Louvain community detection
-- **Similarity**: Cosine similarity on behavioral features
+## Configuration
 
-## Controls
+The `config.py` file centralizes all analysis and visualization parameters:
 
-### Plotly
-- **Rotate**: Click + Drag
-- **Zoom**: Scroll
-- **Pan**: Right Click + Drag
-- **Hover**: View node/edge details
+### Layout Parameters
+- Spring layout configuration (k-value, iterations, dimensionality)
+- Coordinate normalization ranges for WebGL compatibility
+- Separate layouts for location and community networks
 
-### Three.js
-- **Rotate**: Left Click + Drag
-- **Pan**: Right Click + Drag
-- **Zoom**: Scroll
-- **Auto-Rotate**: Press Space
-- **Hover**: View details
+### Network Construction
+- K-neighbors value (default: 15)
+- Edge weight threshold (default: 0.3)
+- Minimum tweets per location (default: 3)
 
-## Data Features
+### Visual Styling
+- Community color palette (12 distinct colors)
+- Node size ranges for locations and communities
+- Opacity values for different element types
+- Three.js-specific rendering parameters
 
-The visualization uses these behavioral features for similarity calculation:
-1. Reach (sum, mean, std)
-2. Retweet count (sum, mean)
-3. Likes (sum, mean)
-4. Posting hour patterns (mean)
+### Community Detection
+- Louvain algorithm resolution (default: 0.8)
+- Weight attribute and random seed for reproducibility
 
-## Node Types
+## Data Format
 
-### Representative Nodes
-- Positioned at community centroids
-- Size scaled by member count
-- Higher bloom intensity
-- Detailed community statistics in tooltips
+### Input Dataset
+The project expects a CSV file with the following columns:
+- locationid: Geographic location identifier
+- lang: Tweet language code
+- reach: User reach/follower count
+- retweetcount: Number of retweets
+- likes: Number of likes
+- weekday: Day of week posted
+- hour: Hour of day posted
 
-### Individual Nodes
-- Colored by community membership
-- White center with community color gradient
-- Lower bloom intensity
-- Basic location statistics
+### Exported Network Data
+The notebook exports a JSON file containing:
+- Communities: Position, size, reach, and connections
+- Locations: Position, community assignment, and reach
+- Edges: Source, target, and weight for all connections
+- Metadata: Generation timestamp, filter thresholds, node counts
+- Three.js Parameters: Synchronized visualization settings
 
-### Edges
-- Location-to-location: Thin gray connections
-- Community-to-community: Thick cylinder beams with bloom
-- Hover shows connection strength
+## Methodology
 
-## Customization
+### 1. Data Preprocessing
+- Remove rows with missing essential data
+- Convert categorical variables to appropriate types
+- Filter locations with insufficient tweet counts
 
-### Change Community Colors
-Edit `COMMUNITY_COLORS` array in visualization files
+### 2. Feature Aggregation
+- Group tweets by locationid
+- Compute statistical summaries (sum, mean, std)
+- Determine dominant language and temporal patterns
 
-### Adjust Node Sizes
-**Plotly**: Modify size calculations in `network_visualization.py`
-**Three.js**: Adjust sphere radius and scaling factors
+### 3. Similarity Computation
+- Standardize numerical features
+- One-hot encode categorical language variable
+- Calculate pairwise cosine similarity matrix
 
-### Modify Bloom Effect
-**Three.js**: Update `UnrealBloomPass` parameters and `emissiveIntensity` values
+### 4. Graph Construction
+- Create k-NN graph structure
+- Add edges only if similarity exceeds threshold
+- Attach node attributes for visualization
 
-## Performance
+### 5. Community Detection
+- Apply Louvain algorithm with configurable resolution
+- Calculate modularity to assess community quality
+- Assign community labels to all nodes
 
-**Plotly**: 822 nodes + 2000 edges, 30-40 fps
-**Three.js**: 427 nodes + 2000 edges + 3000 stars, 60 fps
+### 6. Layout Computation
+- Generate 3D spring layout using NetworkX
+- Normalize coordinates to [-10, 10] range
+- Calculate community centroids from member positions
 
-## Recommendations
+### 7. Export and Visualization
+- Serialize network data to JSON format
+- Load data in Three.js application
+- Render with WebGL and post-processing effects
 
-- **Presentations**: Three.js (superior visuals)
-- **Analysis**: Plotly (easier modification)
-- **Sharing**: Plotly (single HTML file)
-- **Performance**: Three.js (WebGL acceleration)
+## Performance Considerations
+
+### Network Sparsity
+The k-NN approach creates a sparse graph, significantly improving:
+- Community detection speed
+- Visualization rendering performance
+- Memory consumption
+
+### Edge Filtering
+For large networks, only the strongest connections are displayed (configurable via MAX_EDGES_DISPLAY in config.py).
+
+### WebGL Acceleration
+Three.js utilizes GPU rendering for smooth 60fps visualization of hundreds of nodes and thousands of edges.
 
 ## Troubleshooting
 
-**"Port 8000 in use"**: Close previous server instances or change port in `launch.py`
+### Browser Does Not Open Automatically
+Manually open `threejs/simple.html` in your browser after running the export cell.
 
-**"Three.js blank page"**: Ensure `network_data.json` exists, run `export_data.py`
+### Visualization Shows Outdated Data
+Hard refresh the browser (Ctrl+F5) to clear cached JSON data.
 
-**"Plotly not opening"**: Check generated HTML file in plotly folder
+### Port 8000 Already in Use
+Edit `threejs/launch.py` and change the PORT variable to an available port number.
 
+### Missing Module Errors
+Ensure all dependencies are installed: `pip install -r requirements.txt`
+
+## Academic Context
+
+This project was developed as part of a Social Network Analysis course, demonstrating:
+- Network construction from behavioral data
+- Community detection algorithms
+- Interactive visualization techniques
+- Feature engineering for similarity metrics
+- Configuration management for reproducible research
 ## License
 
 Educational project for Social Network Analysis coursework.
-
-### Both Versions
-
-- ✅ Community representatives positioned at cluster centroids (normalized coordinates)- 🌌 Dark universe background with 500+ twinkling stars
-
-- ✅ All nodes colored by community- ⭐ Star systems (communities) with size scaled proportionally to member count
-
-- ✅ Representatives larger than regular nodes- 🪐 Individual location nodes (planets) rendered as small glowing points
-
-- ✅ Clean, professional tooltips (no "universe" theme)- ⚡ Energy beam connections showing inter-community relationships
-
-- ✅ Edge hover showing connection strength- 🎨 Unique color palette for each star system type
-
-- ✅ Proper opacity: representatives (0.95), regular nodes (0.5-0.6)- 📊 Interactive hover info for both stars and planets
-
-- 🔄 Fully rotatable, zoomable 3D view
-
-### Three.js Specific
-
-- ✅ WebGL-accelerated rendering### Optimizations
-
-- ✅ Moderate bloom effect (not overwhelming)
-
-- ✅ 3000 background stars- **Fixed positioning**: Stars now appear at cluster centroids (normalized coordinates)
-
-- ✅ Representative node sizes: 0.4-1.2 units (properly scaled)- Reduced node sizes for better visibility (stars: 8-20 range, planets: 1-3 range)
-
-- ✅ Regular node size: 0.12 units- Top 2000 strongest location connections shown (from 8392 total)
-
-- ✅ Community-based coloring with matching colors- Dual-layer 3D layout for optimal separation
-
-- Reduced glow layers from 3 to 2 for improved performance
-
-### Plotly Specific
-
-- ✅ Single HTML file output## Setup (Windows PowerShell)
-
-- ✅ No server required
-
-- ✅ Easy to share### For Python Version
-
-
-
-## 📊 Network Statistics1. Create/activate a virtual environment (optional but recommended)
-
-
-
-- **Locations**: 822 unique nodes```powershell
-
-- **Communities**: 12 detected groupspython -m venv .venv
-
-- **Edges**: 8,392 total (showing top 2,000 strongest).\.venv\Scripts\Activate.ps1
-
-- **Algorithm**: Louvain community detection```
-
-- **Similarity**: Cosine similarity on 8 features
-
-2. Install dependencies
-
-## 🎮 Controls
-
-```powershell
-
-### Plotlypip install -r requirements.txt
-
-- **Rotate**: Click + Drag```
-
-- **Zoom**: Scroll
-
-- **Pan**: Right Click + Drag### For Three.js Version
-
-- **Hover**: View details
-
-No installation needed! Just needs Python's built-in HTTP server.
-
-### Three.js
-
-- **Rotate**: Left Click + Drag## Run
-
-- **Pan**: Right Click + Drag
-
-- **Zoom**: Scroll### Three.js Version (Recommended)
-
-- **Auto-Rotate**: Press Space```powershell
-
-- **Hover**: View detailspython launch_threejs.py
-
-```
-
-## 📈 Visualizations
-
-### Python/Plotly Version
-
-### Representatives (Community Nodes)```powershell
-
-- Positioned at the centroid of their member nodespython universe_visualization.py
-
-- Size scaled by number of members```
-
-- Higher opacity (0.95) and moderate bloom
-
-- Same color as their community membersThis will:
-
-- Load the dataset `In-Depth Twitter Retweet Analysis Dataset.csv`
-
-### Individual Nodes (Locations)- Build the similarity network and detect communities
-
-- Colored by community (matching representative)- Open an interactive 3D universe in your default browser
-
-- Smaller size (based on reach)- Save a copy as `twitter_universe.html` in the same folder (open manually if auto-open is blocked)
-
-- Lower opacity (0.5-0.6)
-
-- Less bloom effect## Notes
-
-- If no browser window opens, double-click the generated `twitter_universe.html` file to view the universe.
-
-### Edges- You can adjust the default renderer in the script by changing `pio.renderers.default` to `"vscode"` if preferred inside VS Code.
-
-- Location-to-location: Faint gray lines
-- Community-to-community: Brighter colored lines
-- Hover shows connection strength
-
-## 🔧 Customization
-
-### Change Community Colors
-Edit `COMMUNITY_COLORS` array in:
-- `plotly/network_visualization.py` (line 15)
-- `threejs/network_visualization.html` (line 147)
-
-### Adjust Node Sizes
-**Plotly** (`network_visualization.py`):
-- Representatives: Line 260 (size_range = (4, 10))
-- Regular nodes: Line 221 (size = 1.5 + 2.0 * ...)
-
-**Three.js** (`network_visualization.html`):
-- Representatives: Line 242 (minSize = 0.4, maxSize = 1.2)
-- Regular nodes: Line 219 (radius = 0.12)
-
-### Modify Bloom Effect
-**Three.js** (`network_visualization.html`, line 101):
-```javascript
-const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(width, height),
-    1.0,  // strength (0.5-2.0)
-    0.3,  // radius
-    0.9   // threshold (0-1, higher = less bloom)
-);
-```
-
-## 📝 Data Format
-
-The visualization uses these features for similarity:
-1. Reach (sum, mean, std)
-2. Retweet count (sum, mean)
-3. Likes (sum, mean)
-4. Posting hour (mean)
-
-## 🐛 Troubleshooting
-
-**"Representatives not at cluster centers"**
-- Fixed! Uses centroid calculation with normalized coordinates
-
-**"Three.js blank page"**
-- Ensure `network_data.json` exists in `/data/`
-- Run: `python export_data.py` from `/threejs/`
-
-**"Plotly not opening"**
-- Check file: `plotly/network_visualization.html`
-- Open manually in browser
-
-**"Port 8000 in use"**
-- Edit `launch.py`, change `PORT = 8000` to another port
-
-## 📊 Performance
-
-**Plotly**:
-- 822 nodes + 2000 edges
-- ~30-40 fps
-
-**Three.js**:
-- 427 nodes + 2000 edges + 3000 stars
-- 60 fps (WebGL)
-- Lower memory usage
-
-## 🎯 Recommendations
-
-- **Presentations**: Use Three.js (better visuals)
-- **Analysis**: Use Plotly (easier to modify)
-- **Sharing**: Plotly (single HTML file)
-- **Performance**: Three.js (WebGL accelerated)
-
-## 📄 License
-
-Educational project for SNA lab coursework.
