@@ -73,7 +73,7 @@ INTER_COMM_EDGE_OPACITY = 0.6    # Stronger inter-community connections
 
 THREEJS_PARAMS = {
     'node_size': 1.0,           # Base node size multiplier
-    'bloom_strength': 2.0,      # Bloom post-processing strength
+    'bloom_strength': 0.5,      # Bloom post-processing strength
     'node_spread': 1.0,         # Spatial spread multiplier
     'connection_width': 1.0,    # Community connection width multiplier
     'edge_opacity': 0.12,       # Faint edge opacity

@@ -29,7 +29,7 @@ def start_server():
         print(f"Server running at http://localhost:{PORT}")
         httpd.serve_forever()
 
-if __name__ == "__main__":
+if __name__ == "__main__":  
     print("=" * 60)
     print("THREE.JS NETWORK VISUALIZATION LAUNCHER")
     print("=" * 60)

@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter Network Visualization - Three.js</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%2300aaff'/%3E%3Ctext x='32' y='42' font-size='32' text-anchor='middle' fill='white' font-family='Arial'%3ET%3C/text%3E%3C/svg%3E">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #0a0a15;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        canvas { display: block; }
+        
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 22px;
+            text-align: center;
+            z-index: 1000;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-top: 4px solid #00aaff;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(10, 10, 20, 0.85);
+            padding: 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            max-width: 320px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #info h1 {
+            margin: 0 0 12px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        #info p {
+            margin: 6px 0;
+            line-height: 1.5;
+            font-size: 13px;
+            color: #d0d0d0;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(10, 10, 20, 0.85);
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        #tooltip {
+            position: absolute;
+            display: none;
+            background: rgba(10, 10, 20, 0.95);
+            color: white;
+            padding: 14px;
+            border-radius: 8px;
+            pointer-events: none;
+            font-size: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 280px;
+            line-height: 1.6;
+            backdrop-filter: blur(10px);
+            z-index: 900;
+        }
+        #tooltip strong { color: #00aaff; }
+        
+        /* Glass Panel */
+        #panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 320px;
+            height: 100vh;
+            background: rgba(10, 10, 20, 0.75);
+            backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 24px;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            overflow-y: auto;
+            box-shadow: -5px 0 30px rgba(0, 0, 0, 0.5);
+        }
+        #panel.open { transform: translateX(0); }
+        
+        #panelToggle {
+            position: fixed;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            background: rgba(10, 10, 20, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: none;
+            color: #00aaff;
+            padding: 16px 10px;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 8px 0 0 8px;
+            transition: all 0.3s;
+            z-index: 999;
+            box-shadow: -3px 0 15px rgba(0, 0, 0, 0.3);
+        }
+        #panelToggle:hover {
+            background: rgba(0, 170, 255, 0.2);
+            padding-right: 14px;
+        }
+        
+        .section {
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .section:last-child { border-bottom: none; }
+        .section h3 {
+            margin: 0 0 14px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #00aaff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 13px;
+        }
+        .stat-label { color: #aaa; }
+        .stat-value { 
+            color: #fff; 
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .control {
+            margin: 16px 0;
+        }
+        .control label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: #ccc;
+        }
+        .control .val {
+            color: #00aaff;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #00aaff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 170, 255, 0.5);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #00aaff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 170, 255, 0.5);
+        }
+        
+        .checkbox {
+            display: flex;
+            align-items: center;
+            margin: 12px 0;
+            cursor: pointer;
+            user-select: none;
+        }
+        .checkbox input {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #00aaff;
+        }
+        .checkbox label {
+            font-size: 13px;
+            cursor: pointer;
+            margin: 0;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        button {
+            flex: 1;
+            padding: 10px;
+            background: rgba(0, 170, 255, 0.2);
+            border: 1px solid rgba(0, 170, 255, 0.4);
+            border-radius: 6px;
+            color: #00aaff;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: rgba(0, 170, 255, 0.3);
+            border-color: #00aaff;
+            transform: translateY(-1px);
+        }
+        button:active { transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <div id="loadingText">Loading Network Data...</div>
+    </div>
+    
+    <div id="info">
+        <h1>Twitter Network</h1>
+        <p><strong>Communities:</strong> <span id="communityCount">0</span></p>
+        <p><strong>Locations:</strong> <span id="locationCount">0</span></p>
+        <p><strong>Edges:</strong> <span id="edgeCount">0</span></p>
+    </div>
+    
+    <div id="controls">
+        <strong>Controls:</strong><br>
+        Left Drag: Rotate | Right Drag: Pan<br>
+        Scroll: Zoom | Space: Auto-Rotate
+    </div>
+    
+    <div id="tooltip"></div>
+    
+    <div id="panelToggle" onclick="togglePanel()">⚙</div>
+    
+    <div id="panel">
+        <div class="section">
+            <h3>Network Stats</h3>
+            <div class="stat">
+                <span class="stat-label">Communities</span>
+                <span class="stat-value" id="pComm">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Locations</span>
+                <span class="stat-value" id="pLoc">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Edges</span>
+                <span class="stat-value" id="pEdge">0</span>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>Visual Parameters</h3>
+            
+            <div class="control">
+                <label>
+                    <span>Node Size</span>
+                    <span class="val" id="vSize">1.00</span>
+                </label>
+                <input type="range" id="iSize" min="0.5" max="2.5" step="0.1" value="1.0">
+            </div>
+            
+            <div class="control">
+                <label>
+                    <span>Bloom Strength</span>
+                    <span class="val" id="vBloom">2.0</span>
+                </label>
+                <input type="range" id="iBloom" min="0.5" max="5.0" step="0.1" value="2.0">
+            </div>
+            
+            <div class="control">
+                <label>
+                    <span>Node Spread</span>
+                    <span class="val" id="vSpread">1.00</span>
+                </label>
+                <input type="range" id="iSpread" min="0.1" max="5.0" step="0.05" value="1.0">
+            </div>
+            
+            <div class="control">
+                <label>
+                    <span>Connection Width</span>
+                    <span class="val" id="vConn">1.0</span>
+                </label>
+                <input type="range" id="iConn" min="0.1" max="3.0" step="0.1" value="1.0">
+            </div>
+            
+            <div class="control">
+                <label>
+                    <span>Connection Opacity</span>
+                    <span class="val" id="vConnOp">0.6</span>
+                </label>
+                <input type="range" id="iConnOp" min="0.0" max="1.0" step="0.05" value="0.6">
+            </div>
+            
+            <div class="control">
+                <label>
+                    <span>Faint Edge Opacity</span>
+                    <span class="val" id="vEdge">0.12</span>
+                </label>
+                <input type="range" id="iEdge" min="0.0" max="0.5" step="0.02" value="0.12">
+            </div>
+            
+            <div class="control">
+                <label>
+                    <span>Stars Opacity</span>
+                    <span class="val" id="vStar">0.7</span>
+                </label>
+                <input type="range" id="iStar" min="0.0" max="1.0" step="0.05" value="0.7">
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>Display Options</h3>
+            
+            <div class="checkbox">
+                <input type="checkbox" id="cEdge" checked>
+                <label for="cEdge">Show Faint Edges</label>
+            </div>
+            
+            <div class="checkbox">
+                <input type="checkbox" id="cConn" checked>
+                <label for="cConn">Show Connections</label>
+            </div>
+            
+            <div class="checkbox">
+                <input type="checkbox" id="cRot" checked>
+                <label for="cRot">Auto Rotate</label>
+            </div>
+            
+            <div class="checkbox">
+                <input type="checkbox" id="cLabel" checked>
+                <label for="cLabel">Community Labels</label>
+            </div>
+        </div>
+        
+        <div class="section">
+            <button onclick="resetParams()" style="width: 100%;">Reset Parameters</button>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+        console.log('THREE.js loaded, version:', THREE.REVISION);
+
+        // Globals (optimized names)
+        let scene, cam, rend, ctrl, comp, bloom, data;
+        let meshNodes = [], meshReps = [], meshEdges = [], meshLabels = [], meshStars;
+        
+        // Parameters (will be loaded from config)
+        const P = {
+            size: 1.0,
+            bloom: 1.0,
+            spread: 2.0,
+            conn: 1.0,
+            connOp: 0.6,
+            edgeOp: 0.12,
+            starOp: 0.7,
+            showEdge: true,
+            showConn: true,
+            autoRot: true,
+            showLabel: true,
+            locNodeSize: 0.12,
+            commSizeMin: 0.4,
+            commSizeRange: 0.8
+        };
+        
+        const COLORS = [
+            0x1f77b4, 0xff7f0e, 0x2ca02c, 0xd62728, 0x9467bd, 0x8c564b,
+            0xe377c2, 0x7f7f7f, 0xbcbd22, 0x17becf, 0xaec7e8, 0xffbb78
+        ];
+        
+        // UI Functions
+        window.togglePanel = () => {
+            const panel = document.getElementById('panel');
+            const btn = document.getElementById('panelToggle');
+            if (panel.classList.contains('open')) {
+                panel.classList.remove('open');
+                btn.textContent = '⚙';
+            } else {
+                panel.classList.add('open');
+                btn.textContent = '✕';
+            }
+        };
+        
+        window.resetParams = () => {
+            P.size = 1.0; P.bloom = 2.0; P.spread = 1.0; P.conn = 1.0;
+            P.connOp = 0.6; P.edgeOp = 0.12; P.starOp = 0.7;
+            P.showEdge = true; P.showConn = true; P.autoRot = true; P.showLabel = true;
+            
+            document.getElementById('iSize').value = P.size;
+            document.getElementById('iBloom').value = P.bloom;
+            document.getElementById('iSpread').value = P.spread;
+            document.getElementById('iConn').value = P.conn;
+            document.getElementById('iConnOp').value = P.connOp;
+            document.getElementById('iEdge').value = P.edgeOp;
+            document.getElementById('iStar').value = P.starOp;
+            document.getElementById('cEdge').checked = P.showEdge;
+            document.getElementById('cConn').checked = P.showConn;
+            document.getElementById('cRot').checked = P.autoRot;
+            document.getElementById('cLabel').checked = P.showLabel;
+            
+            updateUI();
+            applyParams();
+        };
+        
+        function updateUI() {
+            document.getElementById('vSize').textContent = P.size.toFixed(2);
+            document.getElementById('vBloom').textContent = P.bloom.toFixed(1);
+            document.getElementById('vSpread').textContent = P.spread.toFixed(2);
+            document.getElementById('vConn').textContent = P.conn.toFixed(1);
+            document.getElementById('vConnOp').textContent = P.connOp.toFixed(2);
+            document.getElementById('vEdge').textContent = P.edgeOp.toFixed(2);
+            document.getElementById('vStar').textContent = P.starOp.toFixed(2);
+        }
+        
+        function applyParams() {
+            if (bloom) bloom.strength = P.bloom;
+            if (ctrl) ctrl.autoRotate = P.autoRot;
+            if (meshStars) meshStars.material.opacity = P.starOp;
+            meshLabels.forEach(m => m.visible = P.showLabel);
+            
+            // Apply visibility and opacity separately for different edge types
+            meshEdges.forEach(m => {
+                if (m.userData.type === 'edges') {
+                    // Faint location edges
+                    m.visible = P.showEdge;
+                    if (m.material) m.material.opacity = P.edgeOp;
+                } else if (m.userData.type === 'community_edge') {
+                    // Community connection beams
+                    m.visible = P.showConn;
+                    if (m.material) m.material.opacity = P.connOp;
+                }
+            });
+
+            // Update materials' emissive intensity to reflect new bloom setting
+            try {
+                meshNodes.forEach(m => {
+                    if (m.material && 'emissive' in m.material) {
+                        m.material.emissiveIntensity = computeEmissiveIntensity(m.material.emissive, 0.6);
+                        m.material.needsUpdate = true;
+                    }
+                });
+
+                meshReps.forEach((m, i) => {
+                    if (m.material && 'emissive' in m.material) {
+                        // representative cores are at even indices (core, glow)
+                        m.material.emissiveIntensity = computeEmissiveIntensity(m.material.emissive, 1.2);
+                        m.material.needsUpdate = true;
+                    }
+                });
+
+                meshEdges.forEach(m => {
+                    if (m.userData.type === 'community_edge' && m.material && 'emissive' in m.material) {
+                        m.material.emissiveIntensity = computeEmissiveIntensity(m.material.emissive, 0.5);
+                        m.material.needsUpdate = true;
+                    }
+                });
+            } catch (e) {
+                console.warn('applyParams: failed to update emissive intensities', e);
+            }
+        }
+        
+        // Update node positions and sizes based on parameters
+        function updateNodePositions() {
+            if (!data) return;
+            
+            // Update location nodes (position and size)
+            meshNodes.forEach((mesh, idx) => {
+                const loc = data.locations[idx];
+                if (loc) {
+                    mesh.position.set(
+                        loc.position[0] * P.spread,
+                        loc.position[1] * P.spread,
+                        loc.position[2] * P.spread
+                    );
+                    // Update size
+                    const newScale = P.size;
+                    mesh.scale.set(newScale, newScale, newScale);
+                }
+            });
+            
+            // Update community representatives and labels
+            let repIdx = 0;
+            data.communities.forEach(comm => {
+                const core = meshReps[repIdx];
+                const glow = meshReps[repIdx + 1];
+                const label = meshLabels[Math.floor(repIdx / 2)];
+                
+                if (core && core.userData.data) {
+                    const newPos = new THREE.Vector3(
+                        comm.position[0] * P.spread,
+                        comm.position[1] * P.spread,
+                        comm.position[2] * P.spread
+                    );
+                    core.position.copy(newPos);
+                    const newScale = P.size;
+                    core.scale.set(newScale, newScale, newScale);
+                    if (glow) {
+                        glow.position.copy(newPos);
+                        glow.scale.set(newScale, newScale, newScale);
+                    }
+                    if (label) {
+                        const sz = core.geometry.parameters.radius * newScale;
+                        label.position.set(newPos.x, newPos.y + sz + 0.8, newPos.z);
+                    }
+                }
+                repIdx += 2;
+            });
+            
+            // Update community connection edges
+            let edgeIdx = meshEdges.length > 0 && meshEdges[0].userData.type === 'edges' ? 1 : 0;
+            data.communities.forEach(comm => {
+                comm.connections.forEach(connId => {
+                    const tgt = data.communities.find(c => c.id === connId);
+                    if (!tgt || comm.id >= connId) return;
+                    
+                    const beam = meshEdges[edgeIdx++];
+                    if (beam && beam.userData.type === 'community_edge') {
+                        const st = new THREE.Vector3(
+                            comm.position[0] * P.spread,
+                            comm.position[1] * P.spread,
+                            comm.position[2] * P.spread
+                        );
+                        const en = new THREE.Vector3(
+                            tgt.position[0] * P.spread,
+                            tgt.position[1] * P.spread,
+                            tgt.position[2] * P.spread
+                        );
+                        const dir = new THREE.Vector3().subVectors(en, st);
+                        const len = dir.length();
+                        const mid = new THREE.Vector3().addVectors(st, en).multiplyScalar(0.5);
+                        
+                        // Update geometry to new length
+                        beam.geometry.dispose();
+                        const szF = Math.max(0, comm.size + tgt.size);
+                        const rad = 0.0003 * szF * P.conn;
+                        beam.geometry = new THREE.CylinderGeometry(rad, rad, len, 12, 1, true);
+                        
+                        // Update position and rotation
+                        beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+                        beam.position.copy(mid);
+                    }
+                });
+            });
+            
+            // Update faint edges
+            if (meshEdges.length > 0 && meshEdges[0].userData.type === 'edges') {
+                const edgeMesh = meshEdges[0];
+                const positions = edgeMesh.geometry.attributes.position.array;
+                let idx = 0;
+                data.edges.forEach(e => {
+                    positions[idx++] = e.source[0] * P.spread;
+                    positions[idx++] = e.source[1] * P.spread;
+                    positions[idx++] = e.source[2] * P.spread;
+                    positions[idx++] = e.target[0] * P.spread;
+                    positions[idx++] = e.target[1] * P.spread;
+                    positions[idx++] = e.target[2] * P.spread;
+                });
+                edgeMesh.geometry.attributes.position.needsUpdate = true;
+            }
+        }
+        
+        function clearMeshes() {
+            [...meshNodes, ...meshReps, ...meshEdges, ...meshLabels].forEach(m => {
+                scene.remove(m);
+                if (m.geometry) m.geometry.dispose();
+                if (m.material) {
+                    if (m.material.map) m.material.map.dispose();
+                    m.material.dispose();
+                }
+            });
+            meshNodes = []; meshReps = []; meshEdges = []; meshLabels = [];
+        }
+
+        // Scene setup
+        scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0a0a15, 0.002);
+        
+        cam = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+        cam.position.set(35, 35, 35);
+        
+        rend = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        rend.setSize(window.innerWidth, window.innerHeight);
+        rend.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        rend.toneMapping = THREE.ACESFilmicToneMapping;
+        rend.toneMappingExposure = 0.7;
+        document.body.appendChild(rend.domElement);
+
+        console.log('Renderer created');
+
+        // Orbit controls
+        ctrl = new OrbitControls(cam, rend.domElement);
+        ctrl.enableDamping = true;
+        ctrl.dampingFactor = 0.05;
+        ctrl.minDistance = 10;
+        ctrl.maxDistance = 150;
+        ctrl.autoRotate = P.autoRot;
+        ctrl.autoRotateSpeed = 0.4;
+
+        console.log('Controls initialized');
+
+        // Post-processing
+        comp = new EffectComposer(rend);
+        const renderPass = new RenderPass(scene, cam);
+        comp.addPass(renderPass);
+
+        bloom = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            P.bloom,
+            0.4,
+            0.0
+        );
+        comp.addPass(bloom);
+
+        console.log('Post-processing setup complete');
+
+        // Lighting
+        const aLight = new THREE.AmbientLight(0x505060, 0.6);
+        scene.add(aLight);
+
+        const pLight1 = new THREE.PointLight(0x4488ff, 0.8, 100);
+        pLight1.position.set(25, 25, 25);
+        scene.add(pLight1);
+
+        const pLight2 = new THREE.PointLight(0x8844ff, 0.8, 100);
+        pLight2.position.set(-25, -25, -25);
+        scene.add(pLight2);
+
+        // Create gradient textures
+        function makeTex(hex) {
+            const sz = 128;
+            const cvs = document.createElement('canvas');
+            cvs.width = cvs.height = sz;
+            const ctx = cvs.getContext('2d');
+            const col = new THREE.Color(hex);
+            const grad = ctx.createRadialGradient(sz/2, sz/2, 0, sz/2, sz/2, sz/2);
+            grad.addColorStop(0.0, '#fff');
+            grad.addColorStop(0.35, '#fff');
+            grad.addColorStop(1.0, '#' + col.getHexString());
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, sz, sz);
+            const tex = new THREE.CanvasTexture(cvs);
+            tex.needsUpdate = true;
+            return tex;
+        }
+        const TEX = COLORS.map(makeTex);
+
+        // Compute emissive intensity scaled by bloom and color luminance
+        function computeEmissiveIntensity(col, base=1.0) {
+            // col can be a numeric hex (0xRRGGBB) or a THREE.Color or string
+            const c = new THREE.Color(col);
+            const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; // perceived luminance
+            // boost darker colors so bloom is more uniform across hues
+            const boost = 1.0 / Math.max(0.12, lum);
+            // scale with P.bloom, apply base multiplier and cap to avoid extreme intensity
+            const intensity = Math.min(6.0, P.bloom * 0.5 * boost * base);
+            return intensity;
+        }
+        // Starfield
+        function mkStars() {
+            const geo = new THREE.BufferGeometry();
+            const cnt = 3000;
+            const pos = new Float32Array(cnt * 3);
+            const col = new Float32Array(cnt * 3);
+            
+            for (let i = 0; i < cnt; i++) {
+                const i3 = i * 3;
+                const r = 80 + Math.random() * 180;
+                const th = Math.random() * Math.PI * 2;
+                const ph = Math.acos(2 * Math.random() - 1);
+                
+                pos[i3] = r * Math.sin(ph) * Math.cos(th);
+                pos[i3 + 1] = r * Math.sin(ph) * Math.sin(th);
+                pos[i3 + 2] = r * Math.cos(ph);
+                
+                const b = 0.4 + Math.random() * 0.5;
+                col[i3] = col[i3 + 1] = col[i3 + 2] = b;
+            }
+            
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+            
+            const mat = new THREE.PointsMaterial({
+                size: 0.4,
+                vertexColors: true,
+                transparent: true,
+                opacity: P.starOp,
+                sizeAttenuation: true
+            });
+            
+            meshStars = new THREE.Points(geo, mat);
+            meshStars.userData = { type: 'bg' };
+            scene.add(meshStars);
+        }
+
+        // Load and visualize data
+        async function loadData() {
+            try {
+                console.log('Fetching network data...');
+                const res = await fetch('/data/network_data.json');
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}. Make sure server is running from project root.`);
+                }
+                
+                data = await res.json();
+                console.log('Data loaded:', data.communities?.length, 'communities,', data.locations?.length, 'locations');
+                
+                // Load Three.js parameters from config if available
+                if (data.threejs_params) {
+                    console.log('Loading parameters from config...');
+                    P.size = data.threejs_params.node_size || P.size;
+                    P.bloom = data.threejs_params.bloom_strength || P.bloom;
+                    P.spread = data.threejs_params.node_spread || P.spread;
+                    P.conn = data.threejs_params.connection_width || P.conn;
+                    P.edgeOp = data.threejs_params.edge_opacity || P.edgeOp;
+                    P.starOp = data.threejs_params.stars_opacity || P.starOp;
+                    P.showEdge = data.threejs_params.show_edges !== undefined ? data.threejs_params.show_edges : P.showEdge;
+                    P.autoRot = data.threejs_params.auto_rotate !== undefined ? data.threejs_params.auto_rotate : P.autoRot;
+                    P.showLabel = data.threejs_params.show_labels !== undefined ? data.threejs_params.show_labels : P.showLabel;
+                    P.locNodeSize = data.threejs_params.location_node_size || P.locNodeSize;
+                    P.commSizeMin = data.threejs_params.community_size_min || P.commSizeMin;
+                    P.commSizeRange = data.threejs_params.community_size_range || P.commSizeRange;
+                    
+                    // Update UI controls
+                    document.getElementById('iSize').value = P.size;
+                    document.getElementById('iBloom').value = P.bloom;
+                    document.getElementById('iSpread').value = P.spread;
+                    document.getElementById('iConn').value = P.conn;
+                    document.getElementById('iEdge').value = P.edgeOp;
+                    document.getElementById('iStar').value = P.starOp;
+                    document.getElementById('cEdge').checked = P.showEdge;
+                    document.getElementById('cRot').checked = P.autoRot;
+                    document.getElementById('cLabel').checked = P.showLabel;
+                    updateUI();
+                }
+                
+                updateStats(data.communities.length, data.locations.length, data.edges.length);
+                buildVis(data);
+                
+                document.getElementById('loading').style.display = 'none';
+                console.log('Visualization complete!');
+                
+            } catch (err) {
+                console.error('ERROR loading data:', err);
+                document.getElementById('loadingText').innerHTML = 
+                    `<span style="color: #ff6666;">Error: ${err.message}</span><br><br>` +
+                    `<span style="font-size: 14px;">Check:<br>` +
+                    `1. Server running from project root<br>` +
+                    `2. /data/network_data.json exists<br>` +
+                    `3. Browser console (F12)</span>`;
+            }
+        }
+        
+        function updateStats(c, l, e) {
+            document.getElementById('communityCount').textContent = c;
+            document.getElementById('locationCount').textContent = l;
+            document.getElementById('edgeCount').textContent = e;
+            document.getElementById('pComm').textContent = c;
+            document.getElementById('pLoc').textContent = l;
+            document.getElementById('pEdge').textContent = e;
+        }
+
+        function buildVis(d) {
+            console.log('Building starfield...');
+            mkStars();
+            
+            // Faint edges
+            console.log('Building edges...');
+            const eGeo = new THREE.BufferGeometry();
+            const ePos = [];
+            d.edges.forEach(e => {
+                ePos.push(e.source[0], e.source[1], e.source[2]);
+                ePos.push(e.target[0], e.target[1], e.target[2]);
+            });
+            eGeo.setAttribute('position', new THREE.Float32BufferAttribute(ePos, 3));
+            const eMat = new THREE.LineBasicMaterial({
+                color: 0x5588aa,
+                transparent: true,
+                opacity: P.edgeOp,
+                blending: THREE.AdditiveBlending
+            });
+            const edges = new THREE.LineSegments(eGeo, eMat);
+            edges.userData = { type: 'edges' };
+            edges.visible = P.showEdge;
+            scene.add(edges);
+            meshEdges.push(edges);
+
+            // Location nodes
+            console.log('Building location nodes...');
+            const nGeo = new THREE.SphereGeometry(P.locNodeSize * P.size, 16, 16);
+            d.locations.forEach(loc => {
+                const ci = loc.community % COLORS.length;
+                const mat = new THREE.MeshStandardMaterial({
+                    color: 0xffffff,
+                    map: TEX[ci],
+                    emissive: COLORS[ci],
+                    emissiveIntensity: computeEmissiveIntensity(COLORS[ci], 0.6),
+                    metalness: 0.2,
+                    roughness: 0.7,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const m = new THREE.Mesh(nGeo, mat);
+                m.position.set(loc.position[0] * P.spread, loc.position[1] * P.spread, loc.position[2] * P.spread);
+                m.userData = { type: 'location', data: loc };
+                scene.add(m);
+                meshNodes.push(m);
+            });
+
+            // Community representatives
+            console.log('Building community representatives...');
+            d.communities.forEach(comm => {
+                const ci = comm.id % COLORS.length;
+                const cc = COLORS[ci];
+                
+                const norm = (comm.size - 34) / (122 - 34);
+                const sz = (P.commSizeMin + norm * P.commSizeRange) * P.size;
+                
+                const cGeo = new THREE.SphereGeometry(sz, 24, 24);
+                const cMat = new THREE.MeshStandardMaterial({
+                    color: cc,
+                    emissive: cc,
+                    emissiveIntensity: computeEmissiveIntensity(cc, 1.2),
+                    metalness: 0.1,
+                    roughness: 0.3
+                });
+                const core = new THREE.Mesh(cGeo, cMat);
+                core.position.set(comm.position[0] * P.spread, comm.position[1] * P.spread, comm.position[2] * P.spread);
+                core.userData = { type: 'representative', data: comm };
+                scene.add(core);
+                meshReps.push(core);
+                
+                const gGeo = new THREE.SphereGeometry(sz * 1.3, 20, 20);
+                const gMat = new THREE.MeshBasicMaterial({
+                    color: cc,
+                    transparent: true,
+                    opacity: 0.2,
+                    side: THREE.BackSide,
+                    blending: THREE.AdditiveBlending
+                });
+                const glow = new THREE.Mesh(gGeo, gMat);
+                glow.position.copy(core.position);
+                glow.userData = { type: 'representative', data: comm };
+                scene.add(glow);
+                meshReps.push(glow);
+                
+                // Label
+                const cvs = document.createElement('canvas');
+                cvs.width = 64; cvs.height = 32;
+                const ctx = cvs.getContext('2d');
+                const col = new THREE.Color(cc);
+                ctx.fillStyle = '#' + col.getHexString();
+                ctx.font = 'Bold 20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`C${comm.id}`, 32, 22);
+                const tex = new THREE.CanvasTexture(cvs);
+                const sMat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.85 });
+                const sprite = new THREE.Sprite(sMat);
+                sprite.position.set(core.position.x, core.position.y + sz + 0.8, core.position.z);
+                sprite.scale.set(1.5, 0.75, 1);
+                sprite.userData = { type: 'representative', data: comm };
+                sprite.visible = P.showLabel;
+                scene.add(sprite);
+                meshLabels.push(sprite);
+            });
+
+            // Community connections
+            console.log('Building community connections...');
+            d.communities.forEach(comm => {
+                comm.connections.forEach(connId => {
+                    const tgt = d.communities.find(c => c.id === connId);
+                    if (!tgt || comm.id >= connId) return;
+                    
+                    const ci = comm.id % COLORS.length;
+                    const cc = COLORS[ci];
+                    
+                    const st = new THREE.Vector3(comm.position[0] * P.spread, comm.position[1] * P.spread, comm.position[2] * P.spread);
+                    const en = new THREE.Vector3(tgt.position[0] * P.spread, tgt.position[1] * P.spread, tgt.position[2] * P.spread);
+                    const dir = new THREE.Vector3().subVectors(en, st);
+                    const len = dir.length();
+                    const mid = new THREE.Vector3().addVectors(st, en).multiplyScalar(0.5);
+                    
+                    const szF = Math.max(0, comm.size + tgt.size);
+                    const rad = 0.0003 * szF * P.conn;
+                    if (rad <= 0) return;
+                    
+                    const geo = new THREE.CylinderGeometry(rad, rad, len, 12, 1, true);
+                    const mat = new THREE.MeshStandardMaterial({
+                        color: cc,
+                        emissive: cc,
+                        emissiveIntensity: computeEmissiveIntensity(cc, 0.5),
+                        metalness: 0.05,
+                        roughness: 0.4,
+                        transparent: true,
+                        opacity: P.connOp
+                    });
+                    const beam = new THREE.Mesh(geo, mat);
+                    beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+                    beam.position.copy(mid);
+                    beam.userData = { type: 'community_edge', data: { from: comm.id, to: connId, fromSize: comm.size, toSize: tgt.size }};
+                    beam.visible = P.showConn;
+                    scene.add(beam);
+                    meshEdges.push(beam);
+                });
+            });
+            
+            console.log('Visualization build complete');
+        }
+
+        // Interaction - raycasting
+        const rc = new THREE.Raycaster();
+        const ms = new THREE.Vector2();
+        const tip = document.getElementById('tooltip');
+
+        function onMouse(e) {
+            ms.x = (e.clientX / window.innerWidth) * 2 - 1;
+            ms.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            rc.setFromCamera(ms, cam);
+            const hits = rc.intersectObjects(scene.children, true);
+
+            let pk = null;
+            for (const h of hits) {
+                const t = h.object?.userData?.type;
+                if (!t || t === 'edges' || t === 'bg') continue;
+                pk = h.object;
+                break;
+            }
+
+            if (pk && pk.userData.data) {
+                const d = pk.userData.data;
+                tip.style.display = 'block';
+                tip.style.left = (e.clientX + 15) + 'px';
+                tip.style.top = (e.clientY + 15) + 'px';
+                
+                if (pk.userData.type === 'representative') {
+                    const retweets = d.retweets ? d.retweets.toLocaleString() : 'N/A';
+                    const likes = d.likes ? d.likes.toLocaleString() : 'N/A';
+                    tip.innerHTML = `
+                        <strong>Community ${d.id}</strong><br>
+                        ━━━━━━━━━━━━━━━<br>
+                        Locations: ${d.size}<br>
+                        Total Reach: ${d.reach.toLocaleString()}<br>
+                        ${d.retweets ? `Retweets: ${retweets}<br>` : ''}
+                        ${d.likes ? `Likes: ${likes}` : ''}
+                    `.trim();
+                } else if (pk.userData.type === 'location') {
+                    tip.innerHTML = `
+                        <strong>Location ${d.id}</strong><br>
+                        Community: ${d.community}<br>
+                        Reach: ${d.reach.toLocaleString()}
+                    `;
+                } else if (pk.userData.type === 'community_edge') {
+                    tip.innerHTML = `
+                        <strong>Connection</strong><br>
+                        C${d.from} ↔ C${d.to}<br>
+                        Members: ${d.fromSize} + ${d.toSize}
+                    `;
+                }
+            } else {
+                tip.style.display = 'none';
+            }
+        }
+
+        window.addEventListener('mousemove', onMouse);
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                P.autoRot = !P.autoRot;
+                ctrl.autoRotate = P.autoRot;
+                document.getElementById('cRot').checked = P.autoRot;
+                e.preventDefault();
+            }
+        });
+        
+        window.addEventListener('resize', () => {
+            cam.aspect = window.innerWidth / window.innerHeight;
+            cam.updateProjectionMatrix();
+            rend.setSize(window.innerWidth, window.innerHeight);
+            comp.setSize(window.innerWidth, window.innerHeight);
+            if (bloom) {
+                bloom.resolution.set(window.innerWidth, window.innerHeight);
+            }
+        });
+        
+        // UI Bindings
+        document.getElementById('iSize').addEventListener('input', e => {
+            P.size = parseFloat(e.target.value);
+            updateUI();
+            updateNodePositions();
+        });
+        document.getElementById('iBloom').addEventListener('input', e => {
+            P.bloom = parseFloat(e.target.value);
+            updateUI();
+            applyParams();
+        });
+        document.getElementById('iSpread').addEventListener('input', e => {
+            P.spread = parseFloat(e.target.value);
+            updateUI();
+            updateNodePositions();
+        });
+        document.getElementById('iConn').addEventListener('input', e => {
+            P.conn = parseFloat(e.target.value);
+            updateUI();
+            updateNodePositions();
+        });
+        document.getElementById('iEdge').addEventListener('input', e => {
+            P.edgeOp = parseFloat(e.target.value);
+            updateUI();
+            meshEdges.forEach(m => m.material.opacity = P.edgeOp);
+        });
+        document.getElementById('iConnOp').addEventListener('input', e => {
+            P.connOp = parseFloat(e.target.value);
+            updateUI();
+            applyParams();
+        });
+        document.getElementById('iStar').addEventListener('input', e => {
+            P.starOp = parseFloat(e.target.value);
+            updateUI();
+            applyParams();
+        });
+        document.getElementById('cEdge').addEventListener('change', e => {
+            P.showEdge = e.target.checked;
+            applyParams();
+        });
+        document.getElementById('cConn').addEventListener('change', e => {
+            P.showConn = e.target.checked;
+            applyParams();
+        });
+        document.getElementById('cRot').addEventListener('change', e => {
+            P.autoRot = e.target.checked;
+            applyParams();
+        });
+        document.getElementById('cLabel').addEventListener('change', e => {
+            P.showLabel = e.target.checked;
+            applyParams();
+        });
+
+        // Animation loop
+        function anim() {
+            requestAnimationFrame(anim);
+            ctrl.update();
+            comp.render();
+        }
+
+        // Start everything
+        console.log('Starting application...');
+        loadData();
+        anim();
+        console.log('Animation loop running');
+    </script>
+</body>
+</html>
